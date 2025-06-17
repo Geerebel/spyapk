@@ -14,10 +14,11 @@ android.permissions = CAMERA,INTERNET,RECORD_AUDIO,FOREGROUND_SERVICE,RECEIVE_BO
 
 android.api = 33
 android.minapi = 21
-android.ndk = 23b
+android.ndk = 25b
 android.archs = arm64-v8a,armeabi-v7a
 
 android.services = background
+
 
 [buildozer]
 log_level = 2
