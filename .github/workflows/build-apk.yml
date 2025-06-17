@@ -1,0 +1,58 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      ANDROID_API: 33
+      ANDROID_NDK_VERSION: 25.2.9519653  # This is NDK r25b
+      ANDROID_BUILD_TOOLS_VERSION: 33.0.2
+      ANDROID_SDK_TOOLS_VERSION: 8512546
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11  # or your preferred Python version
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-setuptools git openjdk-11-jdk \
+            build-essential autoconf libtool pkg-config zlib1g-dev libc6-dev
+
+      - name: Install Buildozer and dependencies
+        run: |
+          pip install --upgrade pip
+          pip install buildozer
+          buildozer android clean || true  # clean previous builds if any
+
+      - name: Setup Android SDK and NDK
+        run: |
+          mkdir -p $HOME/Android/Sdk/cmdline-tools
+          cd $HOME/Android/Sdk/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O tools.zip
+          unzip tools.zip
+          mv cmdline-tools latest
+          rm tools.zip
+
+          yes | $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/Android/Sdk "platform-tools" "platforms;android-$ANDROID_API" "build-tools;$ANDROID_BUILD_TOOLS_VERSION" "ndk;$ANDROID_NDK_VERSION"
+
+          # Set environment variables for Android tools
+          echo "export ANDROID_SDK_ROOT=$HOME/Android/Sdk" >> $GITHUB_ENV
+          echo "export ANDROID_NDK_HOME=$HOME/Android/Sdk/ndk/$ANDROID_NDK_VERSION" >> $GITHUB_ENV
+          echo "export PATH=$PATH:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
+
+      - name: Run Buildozer to build APK
+        run: |
+          buildozer -v android debug
